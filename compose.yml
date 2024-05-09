@@ -1,0 +1,40 @@
+services:
+  gitlab:
+    image: gitlab/gitlab-ee:latest
+    container_name: ${SERVICE_NAME}
+    restart: unless-stopped
+    hostname: '${SERVICE_NAME}.${MY_DOMAIN}'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        # Add any other gitlab.rb configuration here, each on its own line
+        external_url 'http://${SERVICE_NAME}.${MY_DOMAIN}'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+#        nginx['listen_https'] = false
+#        nginx['listen_port'] = 80
+    ports:
+#      - '80:80'
+#      - '443:443'
+      - '2222:2222'
+    volumes:
+      - './config:/etc/gitlab'
+      - './logs:/var/log/gitlab'
+      - './data:/var/opt/gitlab'
+    shm_size: '256m'
+    networks:
+      proxy:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=http"
+      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=default-whitelist@file"
+      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=https"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
+      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
+      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
+      - "traefik.docker.network=proxy"
+networks:
+  proxy:
+    external: true
