@@ -1,4 +1,5 @@
 services:
+
   gitlab:
     image: gitlab/gitlab-ee:latest
     container_name: ${SERVICE_NAME}
@@ -21,6 +22,7 @@ services:
       - './data:/var/opt/gitlab'
     shm_size: '256m'
     networks:
+      gitlab:
       proxy:
     labels:
       - "traefik.enable=true"
@@ -35,6 +37,18 @@ services:
       - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
       - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
       - "traefik.docker.network=proxy"
+
+  gitlab_runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab_runner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+#      - ./gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      gitlab:
+
 networks:
+  gitlab:
   proxy:
     external: true
