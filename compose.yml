@@ -1,4 +1,5 @@
 services:
+
   gitlab:
     image: gitlab/gitlab-ee:latest
     container_name: ${SERVICE_NAME}
@@ -6,21 +7,41 @@ services:
     hostname: '${SERVICE_NAME}.${MY_DOMAIN}'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        # Add any other gitlab.rb configuration here, each on its own line
         external_url 'http://${SERVICE_NAME}.${MY_DOMAIN}'
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
-#        nginx['listen_https'] = false
-#        nginx['listen_port'] = 80
+        # OIDC
+        gitlab_rails['omniauth_providers'] = [
+          {
+            'name' => 'openid_connect',
+            'label' => 'Keycloak',
+            'args' => {
+              'name' => 'openid_connect',
+              'scope' => ['openid', 'profile', 'email'],
+              'response_type' => 'code',
+              'issuer' => '${OIDC_ISSUER_URL}',
+              'discovery' => true,
+              'client_auth_method' => 'query',
+              'uid_field' => 'username',
+              'pkce' => true,
+              'client_options' => {
+                'identifier' => 'gitlab',
+                'secret' => '${OIDC_CLIENT_SECRET}',
+                'redirect_uri' => 'https://${SERVICE_NAME}.${MY_DOMAIN}/users/auth/openid_connect/callback'
+              }
+            }
+          }
+        ]
     ports:
-#      - '80:80'
-#      - '443:443'
       - '2222:2222'
     volumes:
       - './config:/etc/gitlab'
       - './logs:/var/log/gitlab'
       - './data:/var/opt/gitlab'
     shm_size: '256m'
+    dns:
+      - '${DNS_SERVER}'
     networks:
+      gitlab:
       proxy:
     labels:
       - "traefik.enable=true"
@@ -35,6 +56,18 @@ services:
       - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
       - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
       - "traefik.docker.network=proxy"
+
+  gitlab_runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: ${SERVICE_NAME}_runner
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gitlab-runner-config:/etc/gitlab-runner
+    networks:
+      gitlab:
+
 networks:
+  gitlab:
   proxy:
     external: true
