@@ -60,19 +60,6 @@ services:
       - traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}
       - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}
       - traefik.docker.network=proxy
-  
-  # gitlab_runner:
-  #   image: gitlab/gitlab-runner:latest
-  #   container_name: ${SERVICE_NAME}_runner
-  #   restart: unless-stopped
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - ./gitlab-runner:/etc/gitlab-runner
-  #   dns:
-  #     - ${DNS_SERVER}
-  #   networks:
-  #     - default
-  #     - external
 
 networks:
   proxy:
