@@ -1,12 +1,11 @@
 services:
-
   gitlab:
     image: gitlab/gitlab-ee:latest
     container_name: ${SERVICE_NAME}
     restart: unless-stopped
-    hostname: '${SERVICE_NAME}.${MY_DOMAIN}'
+    hostname: ${SERVICE_NAME}.${MY_DOMAIN}
     environment:
-      GITLAB_OMNIBUS_CONFIG: |
+      GITLAB_OMNIBUS_CONFIG: >
         external_url 'http://${SERVICE_NAME}.${MY_DOMAIN}'
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         # OIDC
@@ -32,31 +31,37 @@ services:
           }
         ]
     ports:
-      - '2222:2222'
+      - 2222:2222
     volumes:
-      - './config:/etc/gitlab'
-      - './logs:/var/log/gitlab'
-      - './data:/var/opt/gitlab'
-    shm_size: '256m'
+      - ./config:/etc/gitlab
+      - ./logs:/var/log/gitlab
+      - ./data:/var/opt/gitlab
+    shm_size: 256m
     dns:
-      - '${DNS_SERVER}'
+      - ${DNS_SERVER}
     networks:
-      gitlab:
-      proxy:
+      - default
+      - proxy
+      - external
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.${SERVICE_NAME}.entrypoints=http"
-      - "traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)"
-      - "traefik.http.routers.${SERVICE_NAME}.middlewares=default-whitelist@file"
-      - "traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect"
-      - "traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=https"
-      - "traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)"
-      - "traefik.http.routers.${SERVICE_NAME}-secure.tls=true"
-      - "traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}"
-      - "traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}"
-      - "traefik.docker.network=proxy"
-
+      - homepage.name=GitLab
+      - homepage.description=Version control and CI/CD
+      - homepage.icon=gitlab
+      - homepage.href=https://${SERVICE_NAME}.${MY_DOMAIN}
+      - homepage.group=Dev & Automation
+      - traefik.enable=true
+      - traefik.http.routers.${SERVICE_NAME}.entrypoints=http
+      - traefik.http.routers.${SERVICE_NAME}.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)
+      - traefik.http.routers.${SERVICE_NAME}.middlewares=default-whitelist@file
+      - traefik.http.middlewares.${SERVICE_NAME}-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.${SERVICE_NAME}.middlewares=${SERVICE_NAME}-https-redirect
+      - traefik.http.routers.${SERVICE_NAME}-secure.entrypoints=https
+      - traefik.http.routers.${SERVICE_NAME}-secure.rule=Host(`${SERVICE_NAME}.${MY_DOMAIN}`)
+      - traefik.http.routers.${SERVICE_NAME}-secure.tls=true
+      - traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}
+      - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}
+      - traefik.docker.network=proxy
+  
   gitlab_runner:
     image: gitlab/gitlab-runner:latest
     container_name: ${SERVICE_NAME}_runner
@@ -65,28 +70,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - .runner-config:/etc/gitlab-runner
     dns:
-      - '${DNS_SERVER}'
+      - ${DNS_SERVER}
     networks:
-      gitlab:
-
-#  gitlab_runner:
-#    image: 'gitlab/gitlab-runner:latest'
-#    command:
-#      - register
-#      - --non-interactive
-#      - --url "http://${SERVICE_NAME}"
-#      - --registration-token ${RUNNER_REG_TOKEN}
-#      - --executor docker
-#      - --docker-image docker:latest
-#      - --description "master"
-#      - --tag-list "docker"
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock
-#      - ./runner-config:/etc/gitlab-runner
-#    networks:
-#      gitlab:
+      - default
 
 networks:
-  gitlab:
   proxy:
+    external: true
+  external:
     external: true
