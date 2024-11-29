@@ -60,6 +60,7 @@ services:
       - traefik.http.routers.${SERVICE_NAME}-secure.service=${SERVICE_NAME}
       - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${SERVICE_INTERNAL_PORT}
       - traefik.docker.network=proxy
+
 networks:
   proxy:
     external: true
