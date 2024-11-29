@@ -1,34 +1,34 @@
 services:
   gitlab:
-    image: gitlab/gitlab-ee:latest
+    image: gitlab/gitlab-ce:latest
     container_name: ${SERVICE_NAME}
     restart: unless-stopped
     hostname: ${SERVICE_NAME}.${MY_DOMAIN}
     environment:
       GITLAB_OMNIBUS_CONFIG: >
         external_url 'http://${SERVICE_NAME}.${MY_DOMAIN}'
+
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
-        gitlab_rails['omniauth_providers'] = [
-          {
-            'name' => 'openid_connect',
-            'label' => 'Keycloak',
-            'args' => {
-              'name' => 'openid_connect',
-              'scope' => ['openid', 'profile', 'email'],
-              'response_type' => 'code',
-              'issuer' => '${OIDC_ISSUER_URL}',
-              'discovery' => true,
-              'client_auth_method' => 'query',
-              'uid_field' => 'username',
-              'pkce' => true,
-              'client_options' => {
-                'identifier' => 'gitlab',
-                'secret' => '${OIDC_CLIENT_SECRET}',
-                'redirect_uri' => 'https://${SERVICE_NAME}.${MY_DOMAIN}/users/auth/openid_connect/callback'
-              }
+
+        gitlab_rails['omniauth_providers'] = [{
+          name: "openid_connect", # do not change this parameter
+          label: "Keycloak", # optional label for login button, defaults to "Openid Connect"
+          args: {
+            name: "openid_connect",
+            scope: ["openid", "profile", "email"],
+            response_type: "code",
+            issuer: "${OIDC_ISSUER_URL}",
+            client_auth_method: "query",
+            discovery: true,
+            uid_field: "preferred_username",
+            pkce: true,
+            client_options: {
+              identifier: "gitlab",
+              secret: "${OIDC_CLIENT_SECRET}",
+              redirect_uri: "https://${SERVICE_NAME}.${MY_DOMAIN}/users/auth/openid_connect/callback"
             }
           }
-        ]
+        }]
     ports:
       - 2222:2222
     volumes:
